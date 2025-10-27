@@ -12,6 +12,11 @@ services:
       - "${POSTGRES_PORT}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7
@@ -20,6 +25,37 @@ services:
     env_file: .env
     ports:
       - "${REDIS_PORT}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  auth:
+    build: ./auth-service
+    container_name: auth_service
+    restart: always
+    env_file: .env
+    environment:
+      - DEBUG=1
+      - DB_HOST=${POSTGRES_HOST}
+      - DB_NAME=${POSTGRES_DB}
+      - DB_USER=${POSTGRES_USER}
+      - DB_PASS=${POSTGRES_PASSWORD}
+      - DB_PORT=5432
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - SECRET_KEY=django-insecure-change-this-in-production
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./auth-service:/app
+    command: sh -c "python manage.py migrate && gunicorn auth_service.wsgi:application --bind 0.0.0.0:8000 --workers 3 --reload"
 
 volumes:
   pgdata:
