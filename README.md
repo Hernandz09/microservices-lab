@@ -382,8 +382,322 @@ docker exec -it auth_service python manage.py shell
 
 ## 📝 Próximos Pasos
 
-- [ ] Implementar el servicio de blog
-- [ ] Integrar el servicio de email
+- [x] Implementar el servicio de autenticación (Auth Service) - **Día 2 ✅**
+- [x] Implementar el servicio de blog (Blog Service) - **Día 3 ✅**
+- [ ] Integrar JWT entre Auth y Blog Services
+- [ ] Implementar el servicio de email
+- [ ] Desarrollar el frontend
+- [ ] Configurar el reverse proxy
+
+---
+
+## 📝 Día 3: Blog Service
+
+### Microservicio de Blog (Django + DRF + PostgreSQL + Redis)
+
+Microservicio completo para gestión de posts, categorías y autores con búsqueda, paginación y caché.
+
+### 🏗️ Estructura del Servicio
+
+```
+blog-service/
+├── blog_service/          # Proyecto Django principal
+│   ├── settings.py       # Configuración
+│   └── urls.py           # Rutas principales
+├── core/                 # Utilidades compartidas
+│   ├── middleware.py     # Logging + Auth header capture
+│   ├── logging.py        # JSON formatter
+│   └── views.py          # Healthcheck
+├── categories/           # App de categorías
+│   ├── models.py         # Category model
+│   ├── serializers.py
+│   ├── views.py          # CategoryViewSet (cached)
+│   └── urls.py
+├── authors/             # App de autores
+│   ├── models.py         # Author model
+│   └── serializers.py
+├── posts/               # App de posts
+│   ├── models.py         # Post model
+│   ├── serializers.py    # List & Detail serializers
+│   ├── views.py          # PostViewSet con búsqueda
+│   ├── urls.py
+│   └── management/
+│       └── commands/
+│           └── seed_blog.py  # Comando de seeding
+├── Dockerfile
+├── requirements.txt
+├── openapi.yaml         # Contrato API
+└── README.md
+```
+
+### 🎯 Características Implementadas
+
+- ✅ **Modelos**: Category, Author, Post con relaciones FK
+- ✅ **Endpoints públicos**: GET para categorías y posts
+- ✅ **Búsqueda**: Full-text en título y contenido de posts
+- ✅ **Paginación**: 10 posts por página
+- ✅ **Caché Redis**:
+  - Categorías: 60 segundos TTL
+  - Detalle de post: 120 segundos TTL
+- ✅ **Contador de vistas**: Incremento automático al ver posts
+- ✅ **Health Check**: Verifica DB y Redis
+- ✅ **Logging estructurado**: JSON logs por request
+- ✅ **Seed de datos**: 5 categorías, 3 autores, 30 posts
+- ✅ **OpenAPI contract**: Documentación completa de la API
+- ✅ **Preparado para JWT**: Middleware que captura Authorization header
+
+### 🚀 Endpoints Disponibles
+
+| Método | Endpoint | Descripción | Caché |
+|--------|----------|-------------|-------|
+| GET | `/healthz` | Health check (DB + Redis) | No |
+| GET | `/api/categories` | Lista de categorías activas | 60s |
+| GET | `/api/posts` | Lista de posts (paginado) | No |
+| GET | `/api/posts?search=texto` | Búsqueda de posts | No |
+| GET | `/api/posts/{slug}` | Detalle de post | 120s |
+
+### 🐳 Configuración Docker
+
+El servicio corre en el puerto **8001** y se conecta a PostgreSQL y Redis compartidos.
+
+```yaml
+blog:
+  build: ./blog-service
+  container_name: blog_service
+  ports:
+    - "8001:8001"
+  depends_on:
+    - postgres
+    - redis
+```
+
+### 📊 Datos de Ejemplo (Seed)
+
+El comando `seed_blog` se ejecuta automáticamente al iniciar y crea:
+
+- **5 categorías**: Technology, Programming, DevOps, Cloud Computing, Security
+- **3 autores**: John Developer, Jane Architect, Mike DevOps
+- **30 posts**: 20 publicados y 10 borradores
+  - Posts publicados con fechas variadas (últimos 60 días)
+  - Contador de vistas aleatorio (50-5000)
+
+### 🧪 Ejemplos de Uso
+
+#### 1. Health Check
+
+```bash
+curl http://localhost:8001/healthz
+```
+
+**Respuesta:**
+```json
+{
+  "status": "healthy",
+  "checks": {
+    "database": "ok",
+    "redis": "ok"
+  }
+}
+```
+
+#### 2. Listar Categorías (Cacheado 60s)
+
+```bash
+curl http://localhost:8001/api/categories
+```
+
+**Respuesta:**
+```json
+[
+  {
+    "id": 1,
+    "name": "Technology",
+    "slug": "technology"
+  },
+  {
+    "id": 2,
+    "name": "Programming",
+    "slug": "programming"
+  }
+]
+```
+
+#### 3. Listar Posts con Paginación
+
+```bash
+curl http://localhost:8001/api/posts
+```
+
+**Respuesta:**
+```json
+{
+  "count": 20,
+  "next": "http://localhost:8001/api/posts?page=2",
+  "previous": null,
+  "results": [
+    {
+      "id": 1,
+      "title": "Introduction to Microservices Architecture",
+      "slug": "introduction-to-microservices-architecture",
+      "excerpt": "Microservices architecture is a design pattern...",
+      "author": {
+        "id": 1,
+        "display_name": "John Developer",
+        "email": "john.dev@example.com"
+      },
+      "category": {
+        "id": 1,
+        "name": "Technology",
+        "slug": "technology"
+      },
+      "published_at": "2025-10-15T10:30:00Z",
+      "views": 1250
+    }
+  ]
+}
+```
+
+#### 4. Buscar Posts
+
+```bash
+curl "http://localhost:8001/api/posts?search=docker"
+```
+
+#### 5. Ver Detalle de Post (Cacheado 120s, incrementa views)
+
+```bash
+curl http://localhost:8001/api/posts/introduction-to-microservices-architecture
+```
+
+**Respuesta:**
+```json
+{
+  "id": 1,
+  "title": "Introduction to Microservices Architecture",
+  "slug": "introduction-to-microservices-architecture",
+  "body": "Full content of the post...",
+  "excerpt": "Microservices architecture is a design pattern...",
+  "author": {
+    "id": 1,
+    "display_name": "John Developer",
+    "email": "john.dev@example.com"
+  },
+  "category": {
+    "id": 1,
+    "name": "Technology",
+    "slug": "technology"
+  },
+  "status": "published",
+  "published_at": "2025-10-15T10:30:00Z",
+  "views": 1251,
+  "created_at": "2025-10-15T10:00:00Z",
+  "updated_at": "2025-10-15T10:00:00Z"
+}
+```
+
+### 🗄️ Modelos de Base de Datos
+
+**Category**
+- `id`, `name` (único), `slug` (auto-generado), `is_active`
+- `created_at`, `updated_at`
+
+**Author**
+- `id`, `display_name`, `email` (único), `bio`, `is_active`
+- `created_at`, `updated_at`
+
+**Post**
+- `id`, `title`, `slug` (auto-generado), `body`, `excerpt` (auto-generado)
+- `author` (FK), `category` (FK)
+- `status` (draft/published), `views`, `published_at`
+- `created_at`, `updated_at`
+
+### ✅ Checklist Día 3
+
+- [x] **Proyecto Django configurado**: Settings, apps, middleware
+- [x] **Modelos implementados**: Category, Author, Post
+- [x] **Serializers DRF**: List y Detail serializers
+- [x] **ViewSets con features**:
+  - [x] Paginación (10 items/página)
+  - [x] Búsqueda full-text
+  - [x] Filtros por status
+- [x] **Caché Redis**:
+  - [x] Categorías (60s TTL)
+  - [x] Detalle de posts (120s TTL)
+- [x] **Comando seed_blog**: 30 posts de ejemplo
+- [x] **Health check**: Endpoint `/healthz`
+- [x] **Logging estructurado**: Formato JSON
+- [x] **Middlewares**:
+  - [x] Request logging
+  - [x] Auth header logging (prep. Día 4)
+- [x] **Docker**:
+  - [x] Dockerfile optimizado
+  - [x] docker-compose.yml actualizado
+  - [x] Servicio en puerto 8001
+- [x] **Documentación**:
+  - [x] openapi.yaml con contrato completo
+  - [x] README detallado con ejemplos
+  - [x] Ejemplos de cURL
+
+### 🔧 Comandos Útiles
+
+```bash
+# Levantar el servicio blog
+docker-compose up -d blog
+
+# Ver logs en tiempo real
+docker-compose logs -f blog
+
+# Ejecutar seed de datos
+docker-compose exec blog python manage.py seed_blog
+
+# Shell de Django
+docker-compose exec blog python manage.py shell
+
+# Crear superusuario
+docker-compose exec blog python manage.py createsuperuser
+
+# Acceder al admin: http://localhost:8001/admin/
+
+# Verificar caché Redis
+docker-compose exec redis redis-cli
+> KEYS *
+> TTL "clave_aqui"
+
+# Limpiar caché
+docker-compose exec redis redis-cli FLUSHALL
+
+# Reiniciar servicio
+docker-compose restart blog
+```
+
+### 🔐 Preparación para Día 4
+
+El servicio ya está preparado para integración JWT:
+
+1. ✅ **Middleware `AuthTokenLoggingMiddleware`**: Captura y loguea headers `Authorization`
+2. ✅ **Esqueleto en OpenAPI**: Definición de `BearerAuth`
+3. ✅ **ViewSets públicos**: Listos para agregar permisos DRF
+
+**Próximos pasos (Día 4)**:
+- Validar JWT desde Auth Service
+- Proteger endpoints POST/PUT/DELETE
+- Enlazar autores con usuarios de Auth Service
+- Implementar permisos basados en roles
+
+### 📄 Contrato API
+
+El contrato completo está en `blog-service/openapi.yaml`.
+
+Puedes visualizarlo en [Swagger Editor](https://editor.swagger.io/) copiando el contenido del archivo.
+
+---
+
+## 📝 Próximos Pasos
+
+- [x] Implementar el servicio de autenticación (Auth Service) - **Día 2 ✅**
+- [x] Implementar el servicio de blog (Blog Service) - **Día 3 ✅**
+- [ ] Integrar JWT entre Auth y Blog Services - **Día 4**
+- [ ] Implementar el servicio de email
 - [ ] Desarrollar el frontend
 - [ ] Configurar el reverse proxy
 

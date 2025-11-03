@@ -1,0 +1,280 @@
+openapi: 3.0.3
+info:
+  title: Blog Service API
+  description: |
+    API del servicio de blog para el laboratorio de microservicios.
+    
+    **Características:**
+    - Listado de posts con búsqueda y paginación
+    - Detalle de posts con cache Redis
+    - Listado de categorías con cache
+    - Incremento automático de vistas
+    
+    **Próximamente (Día 4):**
+    - Autenticación JWT desde Auth Service
+    - Endpoints protegidos para crear/editar posts
+  version: 1.0.0
+  contact:
+    name: Microservices Lab
+    email: support@example.com
+
+servers:
+  - url: http://localhost:8001
+    description: Servidor de desarrollo local
+
+tags:
+  - name: Health
+    description: Endpoints de salud del servicio
+  - name: Categories
+    description: Gestión de categorías
+  - name: Posts
+    description: Gestión de posts del blog
+
+paths:
+  /healthz:
+    get:
+      tags:
+        - Health
+      summary: Health check del servicio
+      description: Verifica el estado de conexión a PostgreSQL y Redis
+      responses:
+        '200':
+          description: Servicio saludable
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                  checks:
+                    type: object
+                    properties:
+                      database:
+                        type: string
+                        example: ok
+                      redis:
+                        type: string
+                        example: ok
+        '503':
+          description: Servicio no saludable
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: unhealthy
+                  checks:
+                    type: object
+                    properties:
+                      database:
+                        type: string
+                      redis:
+                        type: string
+
+  /api/categories:
+    get:
+      tags:
+        - Categories
+      summary: Listar categorías activas
+      description: Retorna todas las categorías activas (cacheado 60 segundos)
+      responses:
+        '200':
+          description: Lista de categorías
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+
+  /api/posts:
+    get:
+      tags:
+        - Posts
+      summary: Listar posts publicados
+      description: |
+        Retorna posts publicados con soporte para:
+        - Búsqueda por título y contenido
+        - Paginación (10 items por página)
+      parameters:
+        - name: search
+          in: query
+          description: Texto a buscar en título o contenido
+          required: false
+          schema:
+            type: string
+            example: microservices
+        - name: page
+          in: query
+          description: Número de página
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+            example: 1
+      responses:
+        '200':
+          description: Lista paginada de posts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: Total de posts
+                    example: 20
+                  next:
+                    type: string
+                    nullable: true
+                    description: URL de la siguiente página
+                    example: http://localhost:8001/api/posts?page=2
+                  previous:
+                    type: string
+                    nullable: true
+                    description: URL de la página anterior
+                    example: null
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PostList'
+
+  /api/posts/{slug}:
+    get:
+      tags:
+        - Posts
+      summary: Obtener detalle de un post
+      description: |
+        Retorna el detalle completo de un post por su slug.
+        - Cacheado por 120 segundos
+        - Incrementa el contador de vistas
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          description: Slug único del post
+          schema:
+            type: string
+            example: introduction-to-microservices-architecture
+      responses:
+        '200':
+          description: Detalle del post
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostDetail'
+        '404':
+          description: Post no encontrado
+
+components:
+  schemas:
+    Category:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Technology
+        slug:
+          type: string
+          example: technology
+
+    Author:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        display_name:
+          type: string
+          example: John Developer
+        email:
+          type: string
+          format: email
+          example: john.dev@example.com
+
+    PostList:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        title:
+          type: string
+          example: Introduction to Microservices Architecture
+        slug:
+          type: string
+          example: introduction-to-microservices-architecture
+        excerpt:
+          type: string
+          example: Microservices architecture is a design pattern where applications are structured as a collection of loosely coupled services...
+        author:
+          $ref: '#/components/schemas/Author'
+        category:
+          $ref: '#/components/schemas/Category'
+        published_at:
+          type: string
+          format: date-time
+          example: 2025-10-15T10:30:00Z
+        views:
+          type: integer
+          example: 1250
+
+    PostDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        title:
+          type: string
+          example: Introduction to Microservices Architecture
+        slug:
+          type: string
+          example: introduction-to-microservices-architecture
+        body:
+          type: string
+          example: Microservices architecture is a design pattern where applications are structured as a collection of loosely coupled services. This approach offers several benefits...
+        excerpt:
+          type: string
+          example: Microservices architecture is a design pattern where applications are structured as a collection of loosely coupled services...
+        author:
+          $ref: '#/components/schemas/Author'
+        category:
+          $ref: '#/components/schemas/Category'
+        status:
+          type: string
+          enum: [draft, published]
+          example: published
+        published_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: 2025-10-15T10:30:00Z
+        views:
+          type: integer
+          example: 1250
+        created_at:
+          type: string
+          format: date-time
+          example: 2025-10-15T10:00:00Z
+        updated_at:
+          type: string
+          format: date-time
+          example: 2025-10-15T10:00:00Z
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Autenticación JWT (disponible en Día 4).
+        Por ahora el header es solo logueado, no validado.
