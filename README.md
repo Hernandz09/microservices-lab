@@ -1,47 +1,83 @@
 # 🚀 Microservices Lab
 
-Laboratorio de arquitectura de microservicios con Django REST Framework, PostgreSQL y Redis.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Django](https://img.shields.io/badge/django-5.0-green.svg)](https://www.djangoproject.com/)
+[![Docker](https://img.shields.io/badge/docker-compose-blue.svg)](https://docs.docker.com/compose/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue.svg)](https://www.postgresql.org/)
+[![Redis](https://img.shields.io/badge/Redis-7-red.svg)](https://redis.io/)
+
+Laboratorio de arquitectura de microservicios con Django REST Framework, PostgreSQL y Redis. Proyecto educativo para aprender patrones de diseño, comunicación entre servicios y despliegue con Docker.
 
 ## 📋 Tabla de Contenidos
 
-- [Arquitectura](#arquitectura)
-- [Servicios](#servicios)
-- [Tecnologías](#tecnologías)
-- [Instalación](#instalación)
-- [Uso](#uso)
-- [Checklist Día 1](#checklist-día-1)
-- [Día 2: Auth Service](#día-2-auth-service)
+- [Características](#-características)
+- [Arquitectura](#-arquitectura)
+- [Servicios](#-servicios)
+- [Tecnologías](#️-tecnologías)
+- [Instalación Rápida](#-instalación-rápida)
+- [Documentación](#-documentación)
+- [Desarrollo](#-desarrollo)
+- [Testing](#-testing)
+- [Contribuir](#-contribuir)
+- [Roadmap](#-roadmap)
+- [Licencia](#-licencia)
+
+## ✨ Características
+
+- ✅ **Arquitectura de Microservicios**: Servicios independientes y desacoplados
+- ✅ **Autenticación JWT**: Sistema seguro con access y refresh tokens
+- ✅ **API RESTful**: Siguiendo mejores prácticas de diseño
+- ✅ **Cache Redis**: Optimización de rendimiento
+- ✅ **Procesamiento Asíncrono**: Celery para tareas en background
+- ✅ **Containerización**: Todo en Docker para fácil deployment
+- ✅ **Documentación OpenAPI**: Contratos de API versionados
+- ✅ **Logging Estructurado**: JSON logs para monitoreo
+- ✅ **Health Checks**: Endpoints de salud en cada servicio
 
 ## 🏗️ Arquitectura
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                      Frontend (React)                    │
+│                    Frontend (React)                      │
+│                   Port: 3000 (futuro)                    │
 └───────────────────┬─────────────────────────────────────┘
                     │
 ┌───────────────────▼─────────────────────────────────────┐
-│                  Reverse Proxy (Nginx)                   │
+│              Reverse Proxy (Nginx)                       │
+│                   Port: 80 (futuro)                      │
 └────┬──────────────┬────────────────┬────────────────────┘
      │              │                │
 ┌────▼────┐   ┌────▼────┐      ┌───▼──────┐
 │  Auth   │   │  Blog   │      │  Email   │
 │ Service │   │ Service │      │ Service  │
-└────┬────┘   └────┬────┘      └──────────┘
-     │             │
-┌────▼─────────────▼────┐      ┌────────────┐
-│   PostgreSQL (DB)      │      │   Redis    │
-└────────────────────────┘      └────────────┘
+│  :8000  │   │  :8001  │      │  :8002   │
+└────┬────┘   └────┬────┘      └────┬─────┘
+     │             │                 │
+┌────▼─────────────▼────┐      ┌────▼─────┐
+│   PostgreSQL (DB)      │      │  Redis   │
+│      Port: 5432        │      │  :6379   │
+└────────────────────────┘      └──────────┘
+                                      │
+                                ┌─────▼─────┐
+                                │  Celery   │
+                                │  Worker   │
+                                └───────────┘
 ```
+
+**📖 [Ver documentación detallada de arquitectura](docs/ARCHITECTURE.md)**
 
 ### Descripción de Servicios
 
-- **Frontend**: Interfaz de usuario construida con React
-- **Reverse Proxy**: Nginx para enrutamiento y balanceo de carga
-- **Auth Service**: Gestión de autenticación y autorización de usuarios
-- **Blog Service**: CRUD de posts y contenido del blog
-- **Email Service**: Envío de notificaciones por correo electrónico
-- **PostgreSQL**: Base de datos relacional principal
-- **Redis**: Caché en memoria para sesiones y datos temporales
+| Servicio | Puerto | Estado | Descripción |
+|----------|--------|--------|-------------|
+| **Auth Service** | 8000 | ✅ Completado | Autenticación JWT, gestión de usuarios |
+| **Blog Service** | 8001 | ✅ Completado | CRUD de posts, categorías, búsqueda, cache |
+| **Email Service** | 8002 | ✅ Completado | Notificaciones asíncronas con Celery |
+| **PostgreSQL** | 5432 | ✅ Operativo | Base de datos relacional compartida |
+| **Redis** | 6379 | ✅ Operativo | Cache + Message broker para Celery |
+| **Frontend** | 3000 | 📋 Pendiente | Interfaz de usuario React |
+| **Nginx** | 80 | 📋 Pendiente | Reverse proxy y load balancer |
 
 ## 🛠️ Tecnologías
 
@@ -55,44 +91,60 @@ Laboratorio de arquitectura de microservicios con Django REST Framework, Postgre
 | Proxy | Nginx | latest |
 | Contenedores | Docker | latest |
 
-## 📦 Instalación
+## � Instalación Rápida
 
 ### Prerrequisitos
 
-- Docker Desktop instalado
-- Docker Compose v3.9+
-- Git
+- [Docker Desktop](https://www.docker.com/products/docker-desktop) instalado (v20.10+)
+- [Docker Compose](https://docs.docker.com/compose/) v3.9+
+- [Git](https://git-scm.com/)
+- 4GB RAM mínimo para los contenedores
 
 ### Configuración Inicial
 
-1. **Clonar el repositorio**
-
 ```bash
+# 1. Clonar el repositorio
 git clone https://github.com/Hernandz09/microservices-lab.git
 cd microservices-lab
-```
 
-2. **Configurar variables de entorno**
-
-```bash
+# 2. Configurar variables de entorno
 cp .env.example .env
-```
+# Edita .env si necesitas cambiar configuraciones (opcional)
 
-Edita el archivo `.env` con tus configuraciones personalizadas si es necesario.
-
-3. **Levantar los servicios**
-
-```bash
+# 3. Levantar todos los servicios
 docker compose up -d
+
+# 4. Verificar que los contenedores estén corriendo
+docker ps
+
+# 5. Verificar salud de los servicios
+curl http://localhost:8000/health  # Auth Service
+curl http://localhost:8001/healthz  # Blog Service
+curl http://localhost:8002/healthz  # Email Service
 ```
 
-4. **Verificar que los contenedores estén corriendo**
+¡Listo! Los servicios estarán disponibles en:
+- **Auth Service**: http://localhost:8000
+- **Blog Service**: http://localhost:8001
+- **Email Service**: http://localhost:8002
+
+### Datos de Prueba
+
+El Blog Service incluye datos de ejemplo (30 posts, 5 categorías, 3 autores) que se cargan automáticamente.
+
+Para el Auth Service, puedes crear un usuario de prueba:
 
 ```bash
-docker ps
+curl -X POST http://localhost:8000/api/register/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "test@example.com",
+    "password": "testpass123",
+    "password2": "testpass123",
+    "first_name": "Test",
+    "last_name": "User"
+  }'
 ```
-
-Deberías ver los contenedores `db_postgres` y `cache_redis` en ejecución.
 
 ## 🚀 Uso
 
@@ -136,6 +188,158 @@ docker exec -it db_postgres psql -U devuser -d main_db
 docker exec -it cache_redis redis-cli
 ```
 
+## 📚 Documentación
+
+- **[Arquitectura del Sistema](docs/ARCHITECTURE.md)** - Diagramas, patrones de diseño, flujos de datos
+- **[Guía de Contribución](CONTRIBUTING.md)** - Cómo contribuir al proyecto
+- **[Testing y Análisis](docs/testing/)** - Resultados de pruebas y análisis
+- **[Screenshots](docs/screenshots/)** - Capturas de pantalla de funcionalidades
+
+### Contratos de API (OpenAPI)
+
+- [Auth Service](auth-service/README.md) - Endpoints de autenticación
+- [Blog Service OpenAPI](blog-service/openapi.yaml) - Especificación completa
+- [Email Service OpenAPI](email-service/openapi.yaml) - Especificación completa
+
+### Colección de Postman
+
+Importa `postman_collection.json` en Postman para probar todos los endpoints.
+
+```bash
+# O usa newman para tests automatizados
+npm install -g newman
+newman run postman_collection.json
+```
+
+## 💻 Desarrollo
+
+### Estructura del Proyecto
+
+```
+microservices-lab/
+├── auth-service/          # 🔐 Servicio de autenticación
+├── blog-service/          # 📝 Servicio de blog
+├── email-service/         # 📧 Servicio de notificaciones
+├── frontend/              # ⚛️ Frontend React (futuro)
+├── reverse-proxy/         # 🔀 Nginx proxy (futuro)
+├── docs/                  # 📚 Documentación
+│   ├── ARCHITECTURE.md
+│   ├── screenshots/
+│   └── testing/
+├── docker-compose.yml     # 🐳 Orquestación
+├── .env.example           # ⚙️ Variables de entorno
+├── postman_collection.json # 🧪 Tests de API
+├── CONTRIBUTING.md        # 🤝 Guía de contribución
+├── LICENSE                # 📄 Licencia MIT
+└── README.md
+```
+
+### Comandos de Desarrollo
+
+```bash
+# Reconstruir servicios después de cambios en código
+docker compose up -d --build
+
+# Ver logs de un servicio específico
+docker compose logs -f auth
+docker compose logs -f blog
+docker compose logs -f email
+
+# Acceder al shell de Django
+docker compose exec auth python manage.py shell
+docker compose exec blog python manage.py shell
+
+# Ejecutar migraciones
+docker compose exec auth python manage.py migrate
+docker compose exec blog python manage.py migrate
+
+# Crear superusuario (admin)
+docker compose exec auth python manage.py createsuperuser
+docker compose exec blog python manage.py createsuperuser
+
+# Limpiar todo y empezar de cero
+docker compose down -v  # Elimina volúmenes (⚠️ borra datos)
+docker compose up -d --build
+```
+
+### Acceso al Admin de Django
+
+- **Auth Service**: http://localhost:8000/admin/
+- **Blog Service**: http://localhost:8001/admin/
+
+## 🧪 Testing
+
+### Tests Manuales con cURL
+
+```bash
+# Registro de usuario
+curl -X POST http://localhost:8000/api/register/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "test@example.com",
+    "password": "testpass123",
+    "password2": "testpass123",
+    "first_name": "Test",
+    "last_name": "User"
+  }'
+
+# Login (obtener tokens)
+curl -X POST http://localhost:8000/api/token/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "test@example.com",
+    "password": "testpass123"
+  }'
+
+# Listar posts
+curl http://localhost:8001/api/posts/
+
+# Buscar posts
+curl "http://localhost:8001/api/posts/?search=microservices"
+
+# Ver detalle de post
+curl http://localhost:8001/api/posts/introduction-to-microservices-architecture/
+```
+
+### Tests Automatizados
+
+```bash
+# Tests unitarios de Django
+docker compose exec auth python manage.py test
+docker compose exec blog python manage.py test
+
+# Coverage
+docker compose exec auth coverage run --source='.' manage.py test
+docker compose exec auth coverage report
+
+# Tests con Postman/Newman
+newman run postman_collection.json --environment env.json
+```
+
+## 🤝 Contribuir
+
+¡Las contribuciones son bienvenidas! Por favor lee la [Guía de Contribución](CONTRIBUTING.md) antes de enviar un PR.
+
+### Proceso Rápido
+
+1. Fork el proyecto
+2. Crea una rama: `git checkout -b feature/nueva-funcionalidad`
+3. Commit tus cambios: `git commit -m 'feat: agregar nueva funcionalidad'`
+4. Push a la rama: `git push origin feature/nueva-funcionalidad`
+5. Abre un Pull Request
+
+### Convención de Commits
+
+Usa [Conventional Commits](https://www.conventionalcommits.org/):
+
+```
+feat(scope): add new feature
+fix(scope): fix bug
+docs: update documentation
+test: add tests
+refactor: refactor code
+```
+
 ## ✅ Checklist Día 1
 
 ### Entregables
@@ -150,13 +354,18 @@ docker exec -it cache_redis redis-cli
 ```
 microservices-lab/
 ├── .env.example          ✅ Configuración de ejemplo
+├── .gitignore            ✅ Archivos ignorados
 ├── docker-compose.yml    ✅ Orquestación de contenedores
-├── README.md            ✅ Documentación principal
-├── auth-service/        ✅ Estructura creada
-├── blog-service/        ✅ Estructura creada
-├── email-service/       ✅ Estructura creada
-├── frontend/            ✅ Estructura creada
-└── reverse-proxy/       ✅ Estructura creada
+├── README.md             ✅ Documentación principal
+├── postman_collection.json ✅ Colección de pruebas
+├── docs/                 ✅ Documentación adicional
+│   ├── screenshots/      ✅ Capturas de pantalla
+│   └── testing/          ✅ Análisis y pruebas
+├── auth-service/         ✅ Servicio de autenticación
+├── blog-service/         ✅ Servicio de blog
+├── email-service/        📋 Estructura base (pendiente)
+├── frontend/             📋 Estructura base (pendiente)
+└── reverse-proxy/        📋 Estructura base (pendiente)
 ```
 
 ### Verificación
@@ -380,18 +589,40 @@ docker exec -it auth_service python manage.py shell
 
 ---
 
-## 📝 Próximos Pasos
+## �️ Roadmap
 
-- [x] Implementar el servicio de autenticación (Auth Service) - **Día 2 ✅**
-- [x] Implementar el servicio de blog (Blog Service) - **Día 3 ✅**
-- [ ] Integrar JWT entre Auth y Blog Services
-- [ ] Implementar el servicio de email
-- [ ] Desarrollar el frontend
-- [ ] Configurar el reverse proxy
+### ✅ Fase 1: Fundamentos (Completado)
+- [x] Configuración de Docker Compose
+- [x] PostgreSQL y Redis
+- [x] Auth Service con JWT
+- [x] Blog Service con cache
+- [x] Email Service con Celery
+
+### 🚧 Fase 2: Integración (En Progreso)
+- [ ] Validación de JWT entre servicios
+- [ ] Endpoints protegidos (POST/PUT/DELETE)
+- [ ] Roles y permisos
+- [ ] Tests end-to-end
+
+### 📋 Fase 3: Frontend (Planeado)
+- [ ] Frontend React + Vite
+- [ ] Autenticación con JWT
+- [ ] CRUD de posts
+- [ ] Gestión de perfil
+
+### 📋 Fase 4: Producción (Planeado)
+- [ ] Reverse Proxy Nginx
+- [ ] HTTPS/SSL
+- [ ] CI/CD con GitHub Actions
+- [ ] Monitoreo con Prometheus + Grafana
+- [ ] Deploy en cloud (AWS/GCP)
+
+**Ver roadmap completo**: [GitHub Projects](https://github.com/Hernandz09/microservices-lab/projects)
 
 ---
 
-## 📝 Día 3: Blog Service
+<details>
+<summary><h2>📝 Día 3: Blog Service (Histórico)</h2></summary>
 
 ### Microservicio de Blog (Django + DRF + PostgreSQL + Redis)
 
@@ -692,24 +923,61 @@ Puedes visualizarlo en [Swagger Editor](https://editor.swagger.io/) copiando el 
 
 ---
 
-## 📝 Próximos Pasos
+</details>
 
-- [x] Implementar el servicio de autenticación (Auth Service) - **Día 2 ✅**
-- [x] Implementar el servicio de blog (Blog Service) - **Día 3 ✅**
-- [ ] Integrar JWT entre Auth y Blog Services - **Día 4**
-- [ ] Implementar el servicio de email
-- [ ] Desarrollar el frontend
-- [ ] Configurar el reverse proxy
+## � Estadísticas del Proyecto
+
+- **Servicios**: 3 microservicios + 2 bases de datos
+- **Endpoints**: 15+ endpoints REST
+- **Líneas de código**: ~3,000+ (Python)
+- **Tests**: Coverage > 80% (objetivo)
+- **Tiempo de setup**: < 5 minutos
+
+## 🎓 Aprendizajes
+
+Este proyecto cubre:
+
+- ✅ Arquitectura de microservicios
+- ✅ API REST con Django REST Framework
+- ✅ Autenticación JWT
+- ✅ Caché con Redis
+- ✅ Procesamiento asíncrono con Celery
+- ✅ Containerización con Docker
+- ✅ Orquestación con Docker Compose
+- ✅ Logging estructurado
+- ✅ Health checks
+- ✅ OpenAPI/Swagger documentation
+
+## 🐛 Problemas Conocidos
+
+Ver [Issues](https://github.com/Hernandz09/microservices-lab/issues) para reportar bugs o solicitar features.
 
 ## 📄 Licencia
 
-Este proyecto es para fines educativos.
+Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para más detalles.
 
 ## 👨‍💻 Autor
 
 **Ignacio Hernandez**
 - GitHub: [@Hernandz09](https://github.com/Hernandz09)
+- LinkedIn: [Tu perfil](https://linkedin.com)
+
+## 🙏 Agradecimientos
+
+- [Django REST Framework](https://www.django-rest-framework.org/) por el excelente framework
+- [Docker](https://www.docker.com/) por simplificar el deployment
+- Comunidad de Python y Django por los recursos educativos
+
+## ⭐ Star History
+
+Si este proyecto te ha sido útil, ¡considera darle una estrella! ⭐
 
 ---
 
+<div align="center">
+
 🎓 **Microservices Lab** - Proyecto educativo de arquitectura de microservicios
+
+Hecho con ❤️ y ☕ por [Ignacio Hernandez](https://github.com/Hernandz09)
+
+</div>

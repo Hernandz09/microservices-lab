@@ -83,5 +83,55 @@ services:
       - ./blog-service:/app
     command: sh -c "python manage.py migrate && python manage.py seed_blog && gunicorn blog_service.wsgi:application --bind 0.0.0.0:8001 --workers 3 --reload"
 
+  email:
+    build: ./email-service
+    container_name: email_service
+    restart: always
+    env_file: .env
+    environment:
+      - DEBUG=1
+      - DB_HOST=${POSTGRES_HOST}
+      - DB_NAME=${POSTGRES_DB}
+      - DB_USER=${POSTGRES_USER}
+      - DB_PASS=${POSTGRES_PASSWORD}
+      - DB_PORT=5432
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - SECRET_KEY=django-insecure-email-service-key-change-in-production
+      - EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8002:8002"
+    volumes:
+      - ./email-service:/app
+    command: sh -c "python manage.py migrate && gunicorn email_service.wsgi:application --bind 0.0.0.0:8002 --workers 3 --reload"
+
+  celery_worker:
+    build: ./email-service
+    container_name: celery_worker
+    restart: always
+    env_file: .env
+    environment:
+      - DEBUG=1
+      - DB_HOST=${POSTGRES_HOST}
+      - DB_NAME=${POSTGRES_DB}
+      - DB_USER=${POSTGRES_USER}
+      - DB_PASS=${POSTGRES_PASSWORD}
+      - DB_PORT=5432
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - SECRET_KEY=django-insecure-email-service-key-change-in-production
+      - EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
+    depends_on:
+      - redis
+      - email
+    volumes:
+      - ./email-service:/app
+    command: celery -A email_service worker -l info -Q emails,notifications
+
 volumes:
   pgdata:

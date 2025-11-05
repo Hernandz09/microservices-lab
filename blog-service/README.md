@@ -64,7 +64,9 @@ blog-service/
 - Docker y Docker Compose
 - Variables de entorno configuradas en `.env`
 
-### 1. Levantar el servicio con Docker Compose
+### Quick Start
+
+#### 1. Levantar el servicio con Docker Compose
 
 Desde el directorio raíz del proyecto:
 
@@ -72,9 +74,14 @@ Desde el directorio raíz del proyecto:
 docker-compose up -d blog
 ```
 
+Esto levantará automáticamente:
+- PostgreSQL
+- Redis
+- Blog Service (con migraciones y seed automático)
+
 El servicio estará disponible en: **http://localhost:8001**
 
-### 2. Verificar que el servicio está funcionando
+#### 2. Verificar que el servicio está funcionando
 
 ```bash
 # Health check
@@ -90,7 +97,19 @@ curl http://localhost:8001/healthz
 # }
 ```
 
-### 3. El seed se ejecuta automáticamente
+#### 3. Verificar contenedores corriendo
+
+```bash
+# Ver los contenedores corriendo
+docker ps
+
+# Deberías ver:
+# - db_postgres (healthy)
+# - cache_redis (healthy)
+# - blog_service (running)
+```
+
+#### 4. El seed se ejecuta automáticamente
 
 El comando `seed_blog` se ejecuta automáticamente al iniciar el contenedor.
 
@@ -98,6 +117,22 @@ Para ejecutarlo manualmente:
 
 ```bash
 docker-compose exec blog python manage.py seed_blog
+```
+
+#### 5. Pruebas básicas
+
+```bash
+# Listar categorías
+curl http://localhost:8001/api/categories
+
+# Listar posts
+curl http://localhost:8001/api/posts
+
+# Buscar posts sobre "docker"
+curl "http://localhost:8001/api/posts?search=docker"
+
+# Ver detalle de un post
+curl http://localhost:8001/api/posts/introduction-to-microservices-architecture
 ```
 
 ## 📊 Datos de Seed
@@ -429,13 +464,19 @@ docker-compose exec redis redis-cli ping
 docker-compose logs blog | grep -i redis
 ```
 
+### Si necesitas re-ejecutar el seed
+
+```bash
+docker-compose exec blog python manage.py seed_blog
+```
+
 ### Limpiar y empezar de nuevo
 
 ```bash
 # Detener servicios
 docker-compose down
 
-# Limpiar volúmenes (¡cuidado! elimina datos)
+# Limpiar volúmenes (¡CUIDADO! Esto borra los datos)
 docker-compose down -v
 
 # Reconstruir y levantar

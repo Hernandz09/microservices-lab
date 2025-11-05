@@ -1,0 +1,1189 @@
+{
+  "info": {
+    "name": "Microservices Lab - Complete API Collection",
+    "description": "Colección completa para probar Auth Service y Blog Service con autenticación JWT, caché, búsqueda y paginación",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "microservices-lab"
+  },
+  "variable": [
+    {
+      "key": "auth_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "blog_url",
+      "value": "http://localhost:8001",
+      "type": "string"
+    },
+    {
+      "key": "email_url",
+      "value": "http://localhost:8002",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refresh_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "🔐 Auth Service",
+      "item": [
+        {
+          "name": "1. Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Status is healthy', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('healthy');",
+                  "});",
+                  "",
+                  "pm.test('Database is connected', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.database).to.eql('connected');",
+                  "});",
+                  "",
+                  "pm.test('Redis is connected', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.redis).to.eql('connected');",
+                  "});",
+                  "",
+                  "pm.test('Response time is less than 500ms', function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(500);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{auth_url}}/healthz",
+              "host": ["{{auth_url}}"],
+              "path": ["healthz"]
+            },
+            "description": "Verifica que el Auth Service esté funcionando correctamente y que las conexiones a PostgreSQL y Redis estén activas."
+          },
+          "response": []
+        },
+        {
+          "name": "2. Register New User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('User was created successfully', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('user');",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});",
+                  "",
+                  "pm.test('User data is correct', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.user).to.have.property('id');",
+                  "    pm.expect(jsonData.user).to.have.property('email');",
+                  "    pm.expect(jsonData.user).to.not.have.property('password');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"test@example.com\",\n    \"password\": \"SecurePass123!\",\n    \"password2\": \"SecurePass123!\",\n    \"first_name\": \"Test\",\n    \"last_name\": \"User\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{auth_url}}/api/register/",
+              "host": ["{{auth_url}}"],
+              "path": ["api", "register", ""]
+            },
+            "description": "Registra un nuevo usuario en el sistema. Usa EMAIL como identificador único (no username)."
+          },
+          "response": []
+        },
+        {
+          "name": "3. Login (Get JWT Tokens)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Access and refresh tokens received', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('access');",
+                  "    pm.expect(jsonData).to.have.property('refresh');",
+                  "});",
+                  "",
+                  "// Guardar tokens automáticamente en variables de colección",
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('access_token', jsonData.access);",
+                  "    pm.collectionVariables.set('refresh_token', jsonData.refresh);",
+                  "    console.log('✅ Tokens guardados exitosamente!');",
+                  "    console.log('Access Token:', jsonData.access.substring(0, 50) + '...');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"test@example.com\",\n    \"password\": \"SecurePass123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{auth_url}}/api/token/",
+              "host": ["{{auth_url}}"],
+              "path": ["api", "token", ""]
+            },
+            "description": "Autentica al usuario usando EMAIL y password (NO username). Retorna tokens JWT que se guardan automáticamente."
+          },
+          "response": []
+        },
+        {
+          "name": "4. Get User Profile (Protected)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('User profile returned', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('username');",
+                  "    pm.expect(jsonData).to.have.property('email');",
+                  "});",
+                  "",
+                  "pm.test('Password not exposed', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.not.have.property('password');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{auth_url}}/api/me/",
+              "host": ["{{auth_url}}"],
+              "path": ["api", "me", ""]
+            },
+            "description": "Endpoint protegido que retorna el perfil del usuario autenticado. Requiere JWT válido."
+          },
+          "response": []
+        },
+        {
+          "name": "5. Refresh Access Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('New access token received', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('access');",
+                  "});",
+                  "",
+                  "// Actualizar el access token automáticamente",
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('access_token', jsonData.access);",
+                  "    console.log('✅ Access token actualizado!');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"refresh\": \"{{refresh_token}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{auth_url}}/api/token/refresh/",
+              "host": ["{{auth_url}}"],
+              "path": ["api", "token", "refresh", ""]
+            },
+            "description": "Obtiene un nuevo access token usando el refresh token. Útil cuando el access token expira."
+          },
+          "response": []
+        }
+      ],
+      "description": "Endpoints del servicio de autenticación: registro, login, perfil y manejo de tokens JWT."
+    },
+    {
+      "name": "📝 Blog Service",
+      "item": [
+        {
+          "name": "1. Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Status is healthy', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('healthy');",
+                  "});",
+                  "",
+                  "pm.test('Database check exists', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.checks).to.have.property('database');",
+                  "    pm.expect(jsonData.checks.database).to.eql('ok');",
+                  "});",
+                  "",
+                  "pm.test('Redis check exists', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.checks).to.have.property('redis');",
+                  "    pm.expect(jsonData.checks.redis).to.eql('ok');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{blog_url}}/healthz",
+              "host": ["{{blog_url}}"],
+              "path": ["healthz"]
+            },
+            "description": "Verifica el estado del Blog Service y sus conexiones."
+          },
+          "response": []
+        },
+        {
+          "name": "2. Get All Categories (Cached)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Categories returned', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.count).to.be.above(0);",
+                  "    pm.expect(jsonData.results).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('Each category has required fields', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    var category = jsonData.results[0];",
+                  "    pm.expect(category).to.have.property('id');",
+                  "    pm.expect(category).to.have.property('name');",
+                  "    pm.expect(category).to.have.property('slug');",
+                  "});",
+                  "",
+                  "console.log('💡 Ejecuta este request 2 veces para ver el efecto del cache (60s TTL)');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{blog_url}}/api/categories/",
+              "host": ["{{blog_url}}"],
+              "path": ["api", "categories", ""]
+            },
+            "description": "Lista todas las categorías. Resultado cacheado en Redis por 60 segundos."
+          },
+          "response": []
+        },
+        {
+          "name": "3. Get All Posts (Page 1)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Posts returned with pagination', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('count');",
+                  "    pm.expect(jsonData).to.have.property('next');",
+                  "    pm.expect(jsonData).to.have.property('previous');",
+                  "    pm.expect(jsonData).to.have.property('results');",
+                  "});",
+                  "",
+                  "pm.test('Results is an array with items', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.results).to.be.an('array');",
+                  "    pm.expect(jsonData.results.length).to.be.above(0);",
+                  "});",
+                  "",
+                  "pm.test('Each post has required fields', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    var post = jsonData.results[0];",
+                  "    pm.expect(post).to.have.property('title');",
+                  "    pm.expect(post).to.have.property('slug');",
+                  "    pm.expect(post).to.have.property('author');",
+                  "    pm.expect(post).to.have.property('category');",
+                  "    pm.expect(post).to.have.property('views');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{blog_url}}/api/posts/?page=1",
+              "host": ["{{blog_url}}"],
+              "path": ["api", "posts", ""],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Lista posts con paginación (10 por página). Solo muestra posts publicados."
+          },
+          "response": []
+        },
+        {
+          "name": "4. Get Posts Page 2",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Previous page link exists', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.previous).to.not.be.null;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{blog_url}}/api/posts/?page=2",
+              "host": ["{{blog_url}}"],
+              "path": ["api", "posts", ""],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "2"
+                }
+              ]
+            },
+            "description": "Segunda página de posts (items 11-20)."
+          },
+          "response": []
+        },
+        {
+          "name": "5. Search Posts - Docker",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Search results returned', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.results).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('Results contain search term', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.results.length > 0) {",
+                  "        var post = jsonData.results[0];",
+                  "        var searchTerm = 'docker';",
+                  "        var titleMatch = post.title.toLowerCase().includes(searchTerm);",
+                  "        var contentMatch = post.content.toLowerCase().includes(searchTerm);",
+                  "        pm.expect(titleMatch || contentMatch).to.be.true;",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{blog_url}}/api/posts/?search=docker",
+              "host": ["{{blog_url}}"],
+              "path": ["api", "posts", ""],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "docker",
+                  "description": "Busca en título y contenido"
+                }
+              ]
+            },
+            "description": "Búsqueda full-text en títulos y contenido de posts."
+          },
+          "response": []
+        },
+        {
+          "name": "6. Search Posts - Python",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Search results contain Python', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.results.length > 0) {",
+                  "        var post = jsonData.results[0];",
+                  "        var hasMatch = post.title.toLowerCase().includes('python') || ",
+                  "                       post.content.toLowerCase().includes('python');",
+                  "        pm.expect(hasMatch).to.be.true;",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{blog_url}}/api/posts/?search=python",
+              "host": ["{{blog_url}}"],
+              "path": ["api", "posts", ""],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "python"
+                }
+              ]
+            },
+            "description": "Búsqueda de posts relacionados con Python."
+          },
+          "response": []
+        },
+        {
+          "name": "7. Search Posts - Kubernetes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{blog_url}}/api/posts/?search=kubernetes",
+              "host": ["{{blog_url}}"],
+              "path": ["api", "posts", ""],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "kubernetes"
+                }
+              ]
+            },
+            "description": "Búsqueda de posts sobre Kubernetes."
+          },
+          "response": []
+        },
+        {
+          "name": "8. Get Post by Slug (+ Increment Views)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Post details returned', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('title');",
+                  "    pm.expect(jsonData).to.have.property('content');",
+                  "    pm.expect(jsonData).to.have.property('views');",
+                  "});",
+                  "",
+                  "pm.test('Views counter exists', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.views).to.be.a('number');",
+                  "    pm.expect(jsonData.views).to.be.at.least(0);",
+                  "});",
+                  "",
+                  "console.log('💡 Ejecuta este request varias veces para ver el contador de vistas incrementarse!');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{blog_url}}/api/posts/introduction-to-microservices/",
+              "host": ["{{blog_url}}"],
+              "path": ["api", "posts", "introduction-to-microservices", ""]
+            },
+            "description": "Obtiene un post específico por slug. Incrementa el contador de vistas en cada petición. Resultado cacheado por 120s."
+          },
+          "response": []
+        },
+        {
+          "name": "9. Get Another Post (Django Best Practices)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{blog_url}}/api/posts/django-best-practices/",
+              "host": ["{{blog_url}}"],
+              "path": ["api", "posts", "django-best-practices", ""]
+            },
+            "description": "Ejemplo de otro post disponible en el seed."
+          },
+          "response": []
+        },
+        {
+          "name": "10. Get Non-Existent Post (404 Error)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 404 Not Found', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test('Error message returned', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('detail');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{blog_url}}/api/posts/non-existent-slug/",
+              "host": ["{{blog_url}}"],
+              "path": ["api", "posts", "non-existent-slug", ""]
+            },
+            "description": "Test de error: intenta acceder a un post que no existe."
+          },
+          "response": []
+        }
+      ],
+      "description": "Endpoints del Blog Service: categorías, posts, búsqueda, paginación y cache."
+    },
+    {
+      "name": "📧 Email Service",
+      "item": [
+        {
+          "name": "1. Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Status is healthy', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('healthy');",
+                  "});",
+                  "",
+                  "pm.test('All checks passed', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.checks.database).to.eql('ok');",
+                  "    pm.expect(jsonData.checks.redis).to.eql('ok');",
+                  "    pm.expect(jsonData.checks.celery).to.eql('ok');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{email_url}}/healthz",
+              "host": ["{{email_url}}"],
+              "path": ["healthz"]
+            },
+            "description": "Verifica que el Email Service, DB, Redis y Celery estén funcionando."
+          },
+          "response": []
+        },
+        {
+          "name": "2. Send Contact Message",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 202 Accepted', function () {",
+                  "    pm.response.to.have.status(202);",
+                  "});",
+                  "",
+                  "pm.test('Message queued successfully', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('status');",
+                  "    pm.expect(jsonData).to.have.property('uuid');",
+                  "    pm.expect(jsonData.status).to.eql('queued');",
+                  "});",
+                  "",
+                  "console.log('💡 Revisa los logs de Celery: docker-compose logs -f celery_worker');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Carlos Rivas\",\n    \"email\": \"carlos@mail.com\",\n    \"message\": \"Me interesa una colaboración para un proyecto de microservicios\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{email_url}}/api/contact/",
+              "host": ["{{email_url}}"],
+              "path": ["api", "contact", ""]
+            },
+            "description": "Envía un mensaje de contacto. El email se procesa de forma asíncrona con Celery."
+          },
+          "response": []
+        },
+        {
+          "name": "3. Get Contact Messages",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Messages returned with pagination', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('count');",
+                  "    pm.expect(jsonData).to.have.property('results');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{email_url}}/api/contact/",
+              "host": ["{{email_url}}"],
+              "path": ["api", "contact", ""]
+            },
+            "description": "Lista todos los mensajes de contacto recibidos."
+          },
+          "response": []
+        },
+        {
+          "name": "4. Send Internal Notification",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 202 Accepted', function () {",
+                  "    pm.response.to.have.status(202);",
+                  "});",
+                  "",
+                  "pm.test('Notification queued', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('queued');",
+                  "    pm.expect(jsonData).to.have.property('uuid');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"to\": \"admin@example.com\",\n    \"subject\": \"Nuevo post publicado\",\n    \"body\": \"Se ha publicado un nuevo artículo: Introduction to Microservices Architecture\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{email_url}}/api/notify/",
+              "host": ["{{email_url}}"],
+              "path": ["api", "notify", ""]
+            },
+            "description": "Envía una notificación interna entre microservicios. Usado por Blog/Auth para notificar eventos."
+          },
+          "response": []
+        },
+        {
+          "name": "5. Get All Notifications",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Notifications list returned', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('count');",
+                  "    pm.expect(jsonData).to.have.property('results');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{email_url}}/api/notify/",
+              "host": ["{{email_url}}"],
+              "path": ["api", "notify", ""]
+            },
+            "description": "Lista todas las notificaciones enviadas."
+          },
+          "response": []
+        },
+        {
+          "name": "6. Send Contact - Validation Error (No Email)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400 Bad Request', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Validation error returned', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('email');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Test User\",\n    \"message\": \"This should fail\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{email_url}}/api/contact/",
+              "host": ["{{email_url}}"],
+              "path": ["api", "contact", ""]
+            },
+            "description": "Test de validación: intenta enviar mensaje sin email (debe fallar con 400)."
+          },
+          "response": []
+        },
+        {
+          "name": "7. Notification from Blog - New Post",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"to\": \"subscribers@example.com\",\n    \"subject\": \"📝 Nuevo post: Docker Best Practices\",\n    \"body\": \"Hola! Se ha publicado un nuevo artículo en nuestro blog:\\n\\nTítulo: Docker Best Practices\\nCategoría: DevOps\\n\\n¡No te lo pierdas!\\n\\nSaludos,\\nEl equipo de Microservices Lab\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{email_url}}/api/notify/",
+              "host": ["{{email_url}}"],
+              "path": ["api", "notify", ""]
+            },
+            "description": "Ejemplo de cómo el Blog Service notificaría la publicación de un nuevo post."
+          },
+          "response": []
+        },
+        {
+          "name": "8. Notification from Auth - Welcome Email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"to\": \"newuser@example.com\",\n    \"subject\": \"🎉 Bienvenido a Microservices Lab\",\n    \"body\": \"¡Hola!\\n\\nGracias por registrarte en Microservices Lab.\\n\\nTu cuenta ha sido creada exitosamente.\\n\\n¡Disfruta de nuestro contenido!\\n\\nSaludos,\\nEl equipo\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{email_url}}/api/notify/",
+              "host": ["{{email_url}}"],
+              "path": ["api", "notify", ""]
+            },
+            "description": "Ejemplo de cómo el Auth Service notificaría el registro de un nuevo usuario."
+          },
+          "response": []
+        }
+      ],
+      "description": "Endpoints del Email Service: contacto, notificaciones y comunicación entre microservicios."
+    },
+    {
+      "name": "🧪 Error Cases (Negative Tests)",
+      "item": [
+        {
+          "name": "Auth - Register Duplicate User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400 Bad Request', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Error message exists', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.be.an('object');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"test@example.com\",\n    \"password\": \"SecurePass123!\",\n    \"password2\": \"SecurePass123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{auth_url}}/api/register/",
+              "host": ["{{auth_url}}"],
+              "path": ["api", "register", ""]
+            },
+            "description": "Intenta registrar un usuario que ya existe (debe fallar con 400)."
+          },
+          "response": []
+        },
+        {
+          "name": "Auth - Login Wrong Password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 401 Unauthorized', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"test@example.com\",\n    \"password\": \"WrongPassword123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{auth_url}}/api/token/",
+              "host": ["{{auth_url}}"],
+              "path": ["api", "token", ""]
+            },
+            "description": "Intenta hacer login con contraseña incorrecta (debe fallar con 401)."
+          },
+          "response": []
+        },
+        {
+          "name": "Auth - Access Protected Endpoint Without Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 401 Unauthorized', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test('Authentication error returned', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('detail');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{auth_url}}/api/me/",
+              "host": ["{{auth_url}}"],
+              "path": ["api", "me", ""]
+            },
+            "description": "Intenta acceder a endpoint protegido sin token (debe fallar con 401)."
+          },
+          "response": []
+        },
+        {
+          "name": "Auth - Invalid Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 401 Unauthorized', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer invalid_token_here",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{auth_url}}/api/me/",
+              "host": ["{{auth_url}}"],
+              "path": ["api", "me", ""]
+            },
+            "description": "Intenta usar un token inválido (debe fallar con 401)."
+          },
+          "response": []
+        },
+        {
+          "name": "Blog - Page Out of Range",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 404 Not Found', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{blog_url}}/api/posts/?page=999",
+              "host": ["{{blog_url}}"],
+              "path": ["api", "posts", ""],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "999"
+                }
+              ]
+            },
+            "description": "Intenta acceder a una página que no existe (debe fallar con 404)."
+          },
+          "response": []
+        }
+      ],
+      "description": "Casos de prueba negativos para validar el manejo de errores."
+    }
+  ]
+}
